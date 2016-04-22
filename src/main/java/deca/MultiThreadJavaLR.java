@@ -9,17 +9,9 @@ import java.util.concurrent.*;
  */
 public class MultiThreadJavaLR extends LR {
 
-    private static int D = 10;   // Number of dimensions
-    private int N = 1000;  // Number of data points
-    private final double R = 0.00007;  // Scaling factor
-
     private int partitions = 8;
     private int cores = 2;
     ExecutorService executor;
-
-    MultiThreadJavaLR(){
-        this(8, 2);
-    }
 
     MultiThreadJavaLR(int paritions, int cores){
         this.partitions = paritions;
@@ -101,11 +93,9 @@ public class MultiThreadJavaLR extends LR {
         for(int iter = 0; iter < iterations; iter ++) {
             Future[] futures = new Future[partitions];
             try {
-                int allocatedParitions = 0;
-                while (allocatedParitions < partitions) {
-                    RunThread runThread = new RunThread(allocatedParitions);
-                    futures[allocatedParitions] = executor.submit(runThread);
-                    allocatedParitions += 1;
+                for(int i = 0; i < partitions; i ++){
+                    Callable callable = new RunThread(i);
+                    futures[i] = executor.submit(callable);
                 }
                 double[] gradient = new double[D];
                 for (int i = 0; i < partitions; i++) {
@@ -117,7 +107,7 @@ public class MultiThreadJavaLR extends LR {
                 for (int j = 0; j < D; j++) {
                     w[j] -= gradient[j];
                 }
-            }catch (Exception e){
+            } catch (Exception e) {
                 System.out.println("compute error: " + e);
             }
         }

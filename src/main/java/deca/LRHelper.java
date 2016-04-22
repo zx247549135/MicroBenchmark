@@ -17,120 +17,58 @@ public class LRHelper {
         int cores = Integer.parseInt(args[5]);
 
         int type = Integer.parseInt(args[0]);
+        String lrName = "";
+
+        LR lr = null;
         switch (type) {
             case 1: {
-                JavaLR javaLR = new JavaLR();
-                long startTime = System.currentTimeMillis();
-                javaLR.textFile(dimensions, nums);
-                long endTime = System.currentTimeMillis();
-                System.out.println("JavaLR textFile time: " + (endTime - startTime) + "ms");
-
-                startTime = System.currentTimeMillis();
-                javaLR.compute(5);
-                endTime = System.currentTimeMillis();
-                System.out.println("JavaLR compute time: " + (endTime - startTime) + "ms");
-
-                startTime = System.currentTimeMillis();
-                javaLR.compute(iterations);
-                endTime = System.currentTimeMillis();
-                System.out.println("JavaLR compute time: " + (endTime - startTime) + "ms");
+                lr = new JavaLR();
+                lrName = "JavaLR";
                 break;
             }
             case 2: {
-                DecaJavaLR decaJavaLR = new DecaJavaLR();
-                long startTime = System.currentTimeMillis();
-                decaJavaLR.textFile(dimensions, nums);
-                long endTime = System.currentTimeMillis();
-                System.out.println("DecaJavaLR textFile time: " + (endTime - startTime) + "ms");
-
-                startTime = System.currentTimeMillis();
-                decaJavaLR.compute(iterations);
-                endTime = System.currentTimeMillis();
-                System.out.println("DecaJavaLR compute time: " + (endTime - startTime) + "ms");
-
-                startTime = System.currentTimeMillis();
-                decaJavaLR.compute(iterations);
-                endTime = System.currentTimeMillis();
-                System.out.println("DecaJavaLR compute time: " + (endTime - startTime) + "ms");
+                lr = new DecaJavaLR();
+                lrName = "DecaJavaLR";
                 break;
             }
             case 3: {
-                SerializeJavaLR serializeJavaLR = new SerializeJavaLR();
-                long startTime = System.currentTimeMillis();
-                serializeJavaLR.textFile(dimensions, nums);
-                long endTime = System.currentTimeMillis();
-                System.out.println("SerializeJavaLR textFile time: " + (endTime - startTime) + "ms");
-
-                startTime = System.currentTimeMillis();
-                serializeJavaLR.compute(iterations);
-                endTime = System.currentTimeMillis();
-                System.out.println("SerialzieJavaLR compute time: " + (endTime - startTime) + "ms");
-
-                startTime = System.currentTimeMillis();
-                serializeJavaLR.compute(iterations);
-                endTime = System.currentTimeMillis();
-                System.out.println("SerialzieJavaLR compute time: " + (endTime - startTime) + "ms");
+                lr = new SerializeJavaLR();
+                lrName = "SerializeJavaLR";
                 break;
             }
             case 4: {
-                MultiThreadJavaLR multiThreadJavaLR = new MultiThreadJavaLR(partitions, cores);
-                long startTime = System.currentTimeMillis();
-                multiThreadJavaLR.textFile(dimensions, nums);
-                long endTime = System.currentTimeMillis();
-                System.out.println("MultiThreadJavaLR textFile time: " + (endTime - startTime) + "ms");
-
-                startTime = System.currentTimeMillis();
-                multiThreadJavaLR.compute(5);
-                endTime = System.currentTimeMillis();
-                System.out.println("MultiThreadJavaLR compute time: " + (endTime - startTime) + "ms");
-                multiThreadJavaLR.shutdown();
-                triggerGC();
-
-                startTime = System.currentTimeMillis();
-                multiThreadJavaLR.compute(iterations);
-                endTime = System.currentTimeMillis();
-                System.out.println("MultiThreadJavaLR compute time: " + (endTime - startTime) + "ms");
-                multiThreadJavaLR.shutdown();
+                lr = new MultiThreadJavaLR(partitions, cores);
+                lrName = "MultiThreadJavaLR";
                 break;
             }
             case 5: {
-                MultiThreadDecaJavaLR multiThreadDecaJavaLR = new MultiThreadDecaJavaLR();
-                long startTime = System.currentTimeMillis();
-                multiThreadDecaJavaLR.textFile(dimensions, nums, cores);
-                long endTime = System.currentTimeMillis();
-                System.out.println("MultiThreadDecaJavaLR textFile time: " + (endTime - startTime) + "ms");
-
-                startTime = System.currentTimeMillis();
-                multiThreadDecaJavaLR.compute(iterations);
-                endTime = System.currentTimeMillis();
-                System.out.println("MultiThreadDecaJavaLR compute time: " + (endTime - startTime) + "ms");
-
-                startTime = System.currentTimeMillis();
-                multiThreadDecaJavaLR.compute(iterations);
-                endTime = System.currentTimeMillis();
-                System.out.println("MultiThreadDecaJavaLR compute time: " + (endTime - startTime) + "ms");
-                multiThreadDecaJavaLR.shutdown();
+                lr = new MultiThreadDecaJavaLR(partitions, cores);
+                lrName = "MultiThreadDecaJavaLR";
                 break;
             }
             case 6: {
-                MultiThreadSerializeJavaLR multiThreadSerializeJavaLR = new MultiThreadSerializeJavaLR();
-                long startTime = System.currentTimeMillis();
-                multiThreadSerializeJavaLR.textFile(dimensions, nums, cores);
-                long endTime = System.currentTimeMillis();
-                System.out.println("MultiThreadSerializeJavaLR textFile time: " + (endTime - startTime) + "ms");
-
-                startTime = System.currentTimeMillis();
-                multiThreadSerializeJavaLR.compute(iterations);
-                endTime = System.currentTimeMillis();
-                System.out.println("MultiThreadSerializeJavaLR compute time: " + (endTime - startTime) + "ms");
-
-                startTime = System.currentTimeMillis();
-                multiThreadSerializeJavaLR.compute(iterations);
-                endTime = System.currentTimeMillis();
-                System.out.println("MultiThreadSerializeJavaLR compute time: " + (endTime - startTime) + "ms");
+                lr = new MultiThreadSerializeJavaLR(partitions, cores);
+                lrName = "MultiThreadSerialzieJavaLR";
                 break;
             }
         }
+        long startTime = System.currentTimeMillis();
+        lr.textFile(dimensions, nums);
+        long endTime = System.currentTimeMillis();
+        System.out.println(lrName + " textFile time: " + (endTime - startTime) + "ms");
+
+        startTime = System.currentTimeMillis();
+        lr.compute(5);
+        endTime = System.currentTimeMillis();
+        System.out.println(lrName + " warm time: " + (endTime - startTime) + "ms");
+        lr.shutdown();
+        triggerGC();
+
+        startTime = System.currentTimeMillis();
+        lr.compute(iterations);
+        endTime = System.currentTimeMillis();
+        System.out.println(lrName + " compute time: " + (endTime - startTime) + "ms");
+        lr.shutdown();
     }
 
     private static void triggerGC() {

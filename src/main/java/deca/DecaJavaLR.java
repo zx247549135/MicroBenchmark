@@ -9,11 +9,7 @@ import java.util.Arrays;
  * Created by zx on 16-4-6.
  */
 
-public class DecaJavaLR {
-
-    private int D = 10;   // Number of dimensions
-    private int N = 1000;  // Number of data points
-    private final double R = 0.00007;  // Scaling factor
+public class DecaJavaLR extends LR {
 
     private double[] w;
 

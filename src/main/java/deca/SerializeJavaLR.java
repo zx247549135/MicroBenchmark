@@ -11,10 +11,7 @@ import java.util.Arrays;
 /**
  * Created by zx on 16-4-6.
  */
-public class SerializeJavaLR {
-    private int D = 10;   // Number of dimensions
-    private int N = 1000;  // Number of data points
-    private final double R = 0.00007;  // Scaling factor
+public class SerializeJavaLR extends LR {
 
     private double[] w;
 
@@ -58,7 +55,7 @@ public class SerializeJavaLR {
 
         w = new double[D];
         for (int i = 0; i < D; i++) {
-            w[i] = 2 * i * 0.037 - 1;
+            w[i] = 2 * random.nextDouble() - 1;
         }
 //        System.out.print("Initial w: ");
 //        System.out.println(Arrays.toString(w));
@@ -77,7 +74,7 @@ public class SerializeJavaLR {
                     y = 1;
                 double[] x = new double[D];
                 for (int j = 0; j < D; j++) {
-                    x[j] = i * 0.000013 + j * 0.00079 + y * R;
+                    x[j] = random.nextGaussian() + y * R;
                 }
                 DataPoint tmp = new DataPoint(x, y);
                 kryo.writeObject(output, tmp);
@@ -109,8 +106,8 @@ public class SerializeJavaLR {
                     w[j] -= gradient[j];
                 }
             }
-//            System.out.print("Final w: ");
-//            System.out.println(Arrays.toString(w));
+            System.out.print("Final w: ");
+            System.out.println(Arrays.toString(w));
 //        }catch(IOException e){
 //            System.out.println("compute error: " + e);
 //        }

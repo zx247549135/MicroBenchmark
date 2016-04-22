@@ -9,13 +9,15 @@ import java.util.concurrent.*;
 /**
  * Created by zx on 16-4-11.
  */
-public class MultiThreadDecaJavaLR {
+public class MultiThreadDecaJavaLR extends LR{
 
-    private int D = 10;   // Number of dimensions
-    private int N = 1000;  // Number of data points
-    private final double R = 0.00007;  // Scaling factor
+    private int partitions;
+    private int cores;
 
-    private int cores = 8;
+    MultiThreadDecaJavaLR(int partitions, int cores){
+        this.partitions = partitions;
+        this.cores = cores;
+    }
 
     private double[] w;
 
@@ -82,23 +84,22 @@ public class MultiThreadDecaJavaLR {
     }
 
     private Chunk[] cacheBytes;
-    ExecutorService executor = Executors.newFixedThreadPool(cores);
+    ExecutorService executor;
 
-    public void textFile(int dimensions, int nums, int cores) {
+    public void textFile(int dimensions, int nums) {
         this.D = dimensions;
         this.N = nums;
-        this.cores = cores;
 
         w = new double[D];
         for (int i = 0; i < D; i++) {
-            w[i] = 2 * i * 0.037 - 1;
+            w[i] = 2 * random.nextDouble() - 1;
         }
 
         try {
             int offset = 0;
-            cacheBytes = new Chunk[cores];
-            for(int i = 0; i < cores; i ++){
-                cacheBytes[i] = new Chunk(D, N * (D+1) * 8 / cores);
+            cacheBytes = new Chunk[partitions];
+            for(int i = 0; i < partitions; i ++){
+                cacheBytes[i] = new Chunk(D, N * (D+1) * 8 / partitions);
             }
 
             int partitionId = 0;
@@ -109,14 +110,14 @@ public class MultiThreadDecaJavaLR {
                 else
                     y = 1;
 
-                if(partitionId >= cores) {
-                    partitionId -= cores;
+                if(partitionId >= partitions) {
+                    partitionId -= partitions;
                     offset += (D + 1) * 8;
                 }
                 cacheBytes[partitionId].putValue(y, offset);
                 offset += 8;
                 for (int j = 0; j < D; j++) {
-                    double tmp = i * 0.000013 + j * 0.00079 + y * R;
+                    double tmp = random.nextGaussian() + y * R;
                     cacheBytes[partitionId].putValue(tmp, offset);
                     offset += 8;
                 }
@@ -129,27 +130,30 @@ public class MultiThreadDecaJavaLR {
     }
 
     public void compute(int iterations){
+        executor = Executors.newFixedThreadPool(cores);
         for(int iter = 0; iter < iterations; iter ++) {
-            int usedCores = 0;
-            Future[] futures = new Future[cores];
+            Future[] futures = new Future[partitions];
             try {
-                while (usedCores < cores) {
-                    Callable callable = new RunThread(usedCores);
-                    futures[usedCores] = executor.submit(callable);
-                    usedCores += 1;
+                for(int i = 0; i < partitions; i ++){
+                    Callable callable = new RunThread(i);
+                    futures[i] = executor.submit(callable);
                 }
-                for (int i = 0; i < cores; i++) {
-                    double[] gradient = (double[]) futures[i].get(10, TimeUnit.MINUTES);
+                double[] gradient = new double[D];
+                for (int i = 0; i < partitions; i++) {
+                    double[] subgradient = (double[]) futures[i].get(100, TimeUnit.MINUTES);
                     for (int j = 0; j < D; j++) {
-                        w[j] -= gradient[j];
+                        gradient[j] += subgradient[j];
                     }
+                }
+                for (int j = 0; j < D; j++) {
+                    w[j] -= gradient[j];
                 }
             }catch (Exception e){
                 System.out.println("compute error: " + e);
             }
         }
-//        System.out.print("Final w: ");
-//        System.out.println(Arrays.toString(w));
+        System.out.print("Final w: ");
+        System.out.println(Arrays.toString(w));
     }
 
     public void shutdown(){

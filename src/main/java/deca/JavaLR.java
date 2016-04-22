@@ -7,9 +7,6 @@ package deca;
 import java.util.Arrays;
 
 public class JavaLR extends LR {
-    private static int D = 10;   // Number of dimensions
-    private int N = 1000;  // Number of data points
-    private final double R = 0.00007;  // Scaling factor
 
     private DataPoint[] cache;
     private static double[] w;
@@ -60,11 +57,4 @@ public class JavaLR extends LR {
         System.out.println(Arrays.toString(w));
     }
 
-    public static double dot(double[] a, double[] b) {
-        double x = 0;
-        for (int i = 0; i < D; i++) {
-            x += a[i] * b[i];
-        }
-        return x;
-    }
 }
