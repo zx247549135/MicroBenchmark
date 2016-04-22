@@ -23,12 +23,12 @@ public class MultiThreadJavaPR extends MultiThreadPR {
     protected void cache(Map<Integer, ArrayList<Integer>> links) {
         super.cache(links);
 
-        blocks = new Tuple2[cores][links.size() / cores + 1];
-        int[] blockIndices = new int[cores];
+        blocks = new Tuple2[numPartitions][links.size() / numPartitions + 1];
+        int[] blockIndices = new int[numPartitions];
         for (Map.Entry<Integer, ArrayList<Integer>> entry : links.entrySet()) {
             int key = entry.getKey();
             ArrayList<Integer> value = entry.getValue();
-            int partitionId = key % cores;
+            int partitionId = key % numPartitions;
             blocks[partitionId][blockIndices[partitionId]++] = new Tuple2<>(key, value);
         }
     }
@@ -44,8 +44,8 @@ public class MultiThreadJavaPR extends MultiThreadPR {
         public HashMap<Integer, Double>[] call() throws Exception {
             Tuple2<Integer, ArrayList<Integer>>[] block = blocks[partitionId];
             int[] counts = mapOutKeyCounts[partitionId];
-            HashMap<Integer, Double>[] result = new HashMap[cores];
-            for (int i = 0; i < cores; i++) {
+            HashMap<Integer, Double>[] result = new HashMap[numPartitions];
+            for (int i = 0; i < numPartitions; i++) {
                 result[i] = new HashMap<>(counts[i]);
             }
 
@@ -55,7 +55,7 @@ public class MultiThreadJavaPR extends MultiThreadPR {
                 final double value = 1.0 / urls.size();
                 for (Integer url : urls) {
                     double newValue = value;
-                    HashMap<Integer, Double> outMap = result[url % cores];
+                    HashMap<Integer, Double> outMap = result[url % numPartitions];
                     if (outMap.containsKey(url)) {
                         newValue += outMap.get(url);
                     }
@@ -115,8 +115,8 @@ public class MultiThreadJavaPR extends MultiThreadPR {
 
             // reduceBykey:map-side
             int[] counts = mapOutKeyCounts[partitionId];
-            HashMap<Integer, Double>[] result = new HashMap[cores];
-            for (int i = 0; i < cores; i++) {
+            HashMap<Integer, Double>[] result = new HashMap[numPartitions];
+            for (int i = 0; i < numPartitions; i++) {
                 result[i] = new HashMap<>(counts[i]);
             }
             for (Map.Entry<Integer, Pair> joinKeyValue : joinHashMap.entrySet()) {
@@ -126,7 +126,7 @@ public class MultiThreadJavaPR extends MultiThreadPR {
                     final double value = rankValue._1 / urls.size();
                     for (Integer url : urls) {
                         double newValue = value;
-                        HashMap<Integer, Double> outMap = result[url % cores];
+                        HashMap<Integer, Double> outMap = result[url % numPartitions];
                         if (outMap.containsKey(url)) {
                             newValue += outMap.get(url);
                         }
@@ -168,12 +168,12 @@ public class MultiThreadJavaPR extends MultiThreadPR {
 
     @Override
     public void compute(int iterations) {
-        HashMap<Integer, Double>[][] outMessages = new HashMap[cores][];
-        Future<HashMap<Integer, Double>[]>[] futures = new Future[cores];
-        for (int i = 0; i < cores; i++) {
+        HashMap<Integer, Double>[][] outMessages = new HashMap[numPartitions][];
+        Future<HashMap<Integer, Double>[]>[] futures = new Future[numPartitions];
+        for (int i = 0; i < numPartitions; i++) {
             futures[i] = executor.submit(new InitTask(i));
         }
-        for (int i = 0; i < cores; i++) {
+        for (int i = 0; i < numPartitions; i++) {
             try {
                 outMessages[i] = futures[i].get();
             } catch (Exception e) {
@@ -181,37 +181,37 @@ public class MultiThreadJavaPR extends MultiThreadPR {
             }
         }
 
-        HashMap<Integer, Double>[][] inMessages = new HashMap[cores][cores];
-        for (int i = 0; i < cores; i++) {
-            for (int j = 0; j < cores; j++) {
+        HashMap<Integer, Double>[][] inMessages = new HashMap[numPartitions][numPartitions];
+        for (int i = 0; i < numPartitions; i++) {
+            for (int j = 0; j < numPartitions; j++) {
                 inMessages[j][i] = outMessages[i][j];
             }
         }
 
         for (int iter = 1; iter < iterations; iter++) {
-            for (int i = 0; i < cores; i++) {
+            for (int i = 0; i < numPartitions; i++) {
                 futures[i] = executor.submit(new IterTask(i, inMessages[i]));
             }
-            for (int i = 0; i < cores; i++) {
+            for (int i = 0; i < numPartitions; i++) {
                 try {
                     outMessages[i] = futures[i].get();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
-            for (int i = 0; i < cores; i++) {
-                for (int j = 0; j < cores; j++) {
+            for (int i = 0; i < numPartitions; i++) {
+                for (int j = 0; j < numPartitions; j++) {
                     inMessages[j][i] = outMessages[i][j];
                 }
             }
         }
 
-        Future<HashMap<Integer, Double>>[] resultFutures = new Future[cores];
-        HashMap<Integer, Double>[] results = new HashMap[cores];
-        for (int i = 0; i < cores; i++) {
+        Future<HashMap<Integer, Double>>[] resultFutures = new Future[numPartitions];
+        HashMap<Integer, Double>[] results = new HashMap[numPartitions];
+        for (int i = 0; i < numPartitions; i++) {
             resultFutures[i] = executor.submit(new EndTask(i, inMessages[i]));
         }
-        for (int i = 0; i < cores; i++) {
+        for (int i = 0; i < numPartitions; i++) {
             try {
                 results[i] = resultFutures[i].get();
             } catch (Exception e) {
@@ -219,7 +219,7 @@ public class MultiThreadJavaPR extends MultiThreadPR {
             }
         }
 
-//        for (int i = 0; i < cores; i++) {
+//        for (int i = 0; i < numPartitions; i++) {
 //            System.out.println(results[i]);
 //        }
     }
