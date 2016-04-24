@@ -158,8 +158,8 @@ public class MultiThreadSerializeJavaLR extends LR {
                 System.out.println("compute error: " + e);
             }
         }
-        System.out.print("Final w: ");
-        System.out.println(Arrays.toString(w));
+//        System.out.print("Final w: ");
+//        System.out.println(Arrays.toString(w));
     }
 
     public void shutdown(){
