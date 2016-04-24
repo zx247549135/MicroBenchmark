@@ -58,7 +58,7 @@ public class LRHelper {
         System.out.println(lrName + " textFile time: " + (endTime - startTime) + "ms");
 
         startTime = System.currentTimeMillis();
-        lr.compute(5);
+        lr.compute(20);
         endTime = System.currentTimeMillis();
         System.out.println(lrName + " warm time: " + (endTime - startTime) + "ms");
         lr.shutdown();

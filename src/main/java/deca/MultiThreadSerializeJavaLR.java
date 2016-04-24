@@ -43,7 +43,7 @@ public class MultiThreadSerializeJavaLR extends LR {
     }
 
     class RunThread implements Callable {
-        int partitionId;
+        int partitionId = 0;
 
         RunThread(int partitionId){
             this.partitionId = partitionId;
@@ -56,7 +56,7 @@ public class MultiThreadSerializeJavaLR extends LR {
             try {
                 Input input = new Input(block.toInputStream());
                 for (int i = 0; i < block.objectCount; i++) {
-                    DataPoint p = (DataPoint) kryo.readObject(input, registration.getType());
+                    DataPoint p = (DataPoint) kryos[partitionId].readObject(input, registrations[partitionId].getType());
                     double dot = dot(w, p.x);
                     double tmp = (1 / (1 + Math.exp(-p.y * dot)) - 1) * p.y;
                     for (int j = 0; j < D; j++) {
@@ -65,8 +65,8 @@ public class MultiThreadSerializeJavaLR extends LR {
                 }
                 input.close();
             }catch (Exception e){
-                System.out.println("Thread error: " );
-                e.printStackTrace();
+                System.out.println("Thread error: " + partitionId + ";" + e);
+                //e.printStackTrace();
             }
             return gradient;
         }
@@ -81,13 +81,16 @@ public class MultiThreadSerializeJavaLR extends LR {
     }
 
     private Chunk[] cacheSerializeBytes;
-    Kryo kryo = new Kryo();
-    Registration registration;
+    Kryo[] kryos;
+    Registration[] registrations;
     ExecutorService executor;
 
     public void textFile(int dimension, int nums) {
         this.D = dimension;
         this.N = nums;
+
+        kryos = new Kryo[partitions];
+        registrations = new Registration[partitions];
 
         w = new double[D];
         for (int i = 0; i < D; i++) {
@@ -96,13 +99,16 @@ public class MultiThreadSerializeJavaLR extends LR {
 
         cacheSerializeBytes = new Chunk[partitions];
         for (int i = 0; i < partitions; i++) {
-            cacheSerializeBytes[i] = new Chunk(N / partitions * (D + 1) * 8);
+            cacheSerializeBytes[i] = new Chunk(N / partitions * (D + 1 + 1) * 8);
         }
         Output[] outputs = new Output[partitions];
         for (int i = 0; i < partitions; i++) {
             outputs[i] = new Output(cacheSerializeBytes[i]);
         }
-        registration = kryo.register(DataPoint.class);
+        for (int i = 0; i < partitions; i ++) {
+            kryos[i] = new Kryo();
+            registrations[i] = kryos[i].register(DataPoint.class);
+        }
         int partitionId = 0;
         for (int i = 0; i < N; i++) {
             int y;
@@ -119,7 +125,7 @@ public class MultiThreadSerializeJavaLR extends LR {
                 partitionId -= partitions;
             }
             DataPoint tmp = new DataPoint(x, y);
-            kryo.writeObject(outputs[partitionId], tmp);
+            kryos[partitionId].writeObject(outputs[partitionId], tmp);
             cacheSerializeBytes[partitionId].increase(1);
             partitionId += 1;
         }
