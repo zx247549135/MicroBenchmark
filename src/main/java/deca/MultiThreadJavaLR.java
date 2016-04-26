@@ -30,6 +30,7 @@ public class MultiThreadJavaLR extends LR {
             double[] gradient = new double[D];
             DataPoint[] block = cache[partitionId];
             for (int i = 0; i < block.length; i++) {
+                double[] subgradient = new double[D];
                 DataPoint p = block[i];
                 if (p == null)
                     break;
