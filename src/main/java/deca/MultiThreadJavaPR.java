@@ -13,7 +13,8 @@ import java.util.concurrent.Future;
  */
 public class MultiThreadJavaPR extends MultiThreadPR {
 
-    public MultiThreadJavaPR() {
+    public MultiThreadJavaPR(int numCores, int numPartitions) {
+        super(numCores, numPartitions);
         name = "MultiThreadJavaPR";
     }
 

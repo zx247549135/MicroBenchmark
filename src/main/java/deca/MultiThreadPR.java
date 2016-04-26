@@ -10,13 +10,23 @@ import java.util.concurrent.Executors;
  * Created by luluorta on 16-4-11.
  */
 public abstract class MultiThreadPR extends PR {
-    protected int numCores = Runtime.getRuntime().availableProcessors();
-    protected int numPartitions = numCores * 4;
-    protected ExecutorService executor = Executors.newFixedThreadPool(numCores);
+    protected int numCores;
+    protected int numPartitions;
+    protected ExecutorService executor;
 
-    protected int[] initKeyCounts = new int[numPartitions];
-    protected int[] reduceInKeyCounts = new int[numPartitions];
-    protected int[][] mapOutKeyCounts = new int[numPartitions][numPartitions];
+    protected int[] initKeyCounts;
+    protected int[] reduceInKeyCounts;
+    protected int[][] mapOutKeyCounts;
+
+    public MultiThreadPR(int numCores, int numPartitions) {
+        this.numCores = numCores;
+        this.numPartitions = numPartitions;
+
+        executor = Executors.newFixedThreadPool(numCores);
+        initKeyCounts = new int[numPartitions];
+        reduceInKeyCounts = new int[numPartitions];
+        mapOutKeyCounts = new int[numPartitions][numPartitions];
+    }
 
     @Override
     protected void cache(Map<Integer, ArrayList<Integer>> links) {

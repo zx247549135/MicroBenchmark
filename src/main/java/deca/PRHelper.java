@@ -9,9 +9,9 @@ import java.util.concurrent.TimeUnit;
 public class PRHelper {
 
     public static void main(String[] args) {
-        int iterations = Integer.parseInt(args[2]);
-        File dataFile = new File(args[1]);
         int type = Integer.parseInt(args[0]);
+        File dataFile = new File(args[1]);
+        int iterations = Integer.parseInt(args[2]);
 
         PR pr = null;
 
@@ -37,7 +37,9 @@ public class PRHelper {
                 break;
             }
             case 6: {
-                pr = new MultiThreadJavaPR();
+                int numCores = Integer.parseInt(args[3]);
+                int numPartitions = Integer.parseInt(args[4]);
+                pr = new MultiThreadJavaPR(numCores, numPartitions);
                 break;
             }
         }
