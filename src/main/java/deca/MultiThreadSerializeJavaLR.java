@@ -56,6 +56,7 @@ public class MultiThreadSerializeJavaLR extends LR {
             try {
                 Input input = new Input(block.toInputStream());
                 for (int i = 0; i < block.objectCount; i++) {
+                    double[] subgradient = new double[D];
                     DataPoint p = (DataPoint) kryos[partitionId].readObject(input, registrations[partitionId].getType());
                     double dot = dot(w, p.x);
                     double tmp = (1 / (1 + Math.exp(-p.y * dot)) - 1) * p.y;
@@ -98,8 +99,9 @@ public class MultiThreadSerializeJavaLR extends LR {
         }
 
         cacheSerializeBytes = new Chunk[partitions];
+        int chunkSize = N / partitions * (D + 1) * 8 + N / partitions * 3;
         for (int i = 0; i < partitions; i++) {
-            cacheSerializeBytes[i] = new Chunk(N / partitions * (D + 1 + 1) * 8);
+            cacheSerializeBytes[i] = new Chunk(chunkSize);
         }
         Output[] outputs = new Output[partitions];
         for (int i = 0; i < partitions; i++) {
