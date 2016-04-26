@@ -1,5 +1,9 @@
 package deca;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
+import com.twitter.chill.AllScalaRegistrar;
 import scala.Tuple2;
 
 import java.util.ArrayList;
@@ -11,30 +15,52 @@ import java.util.concurrent.Future;
 /**
  * Created by zx on 16-4-6.
  */
-public class MultiThreadJavaPR extends MultiThreadPR {
+public class MultiThreadSerializeJavaPR extends MultiThreadPR {
 
-    public MultiThreadJavaPR(int numCores, int numPartitions) {
+    public MultiThreadSerializeJavaPR(int numCores, int numPartitions) {
         super(numCores, numPartitions);
-        name = "MultiThreadJavaPR";
+        name = "MultiThreadSerializeJavaPR";
     }
 
-    Tuple2<Integer, ArrayList<Integer>>[][] blocks;
+    Kryo[] kryoes;
+    Chunk[] blocks;
 
     @Override
     protected void cache(Map<Integer, ArrayList<Integer>> links) {
         super.cache(links);
 
-        blocks = new Tuple2[numPartitions][];
+        kryoes = new Kryo[numPartitions];
         for (int i = 0; i < numPartitions; i++) {
-            blocks[i] = new Tuple2[initKeyCounts[i]];
+            Kryo kryo = new Kryo();
+            new AllScalaRegistrar().apply(kryo);
+            kryoes[i] = kryo;
         }
-        int[] blockIndices = new int[numPartitions];
+
+        blocks = new Chunk[numPartitions];
+        for (int i = 0; i < numPartitions; i++) {
+            blocks[i] = new Chunk(initCounts[i] * 4 + initKeyCounts[i] * 4 * 6);
+        }
+        Output[] outputs = new Output[numPartitions];
+        for (int i = 0; i < numPartitions; i++) {
+            outputs[i] = new Output(blocks[i]);
+        }
+
+        long startTime = System.currentTimeMillis();
         for (Map.Entry<Integer, ArrayList<Integer>> entry : links.entrySet()) {
             int key = entry.getKey();
             ArrayList<Integer> value = entry.getValue();
             int partitionId = key % numPartitions;
-            blocks[partitionId][blockIndices[partitionId]++] = new Tuple2<>(key, value);
+            kryoes[partitionId].writeObject(outputs[partitionId], new Tuple2<>(key, value));
         }
+        for (int i = 0; i < numPartitions; i++) {
+            outputs[i].flush();
+            outputs[i].close();
+        }
+//        for (int i = 0; i < numPartitions; i++) {
+//            System.out.println(blocks[i].capacity());
+//        }
+        long endTime = System.currentTimeMillis();
+        System.out.println("Serializer cache bytes time: " + (endTime - startTime) + "ms");
     }
 
     private class InitTask implements Callable<HashMap<Integer, Double>[]> {
@@ -46,16 +72,19 @@ public class MultiThreadJavaPR extends MultiThreadPR {
 
         @Override
         public HashMap<Integer, Double>[] call() throws Exception {
-            Tuple2<Integer, ArrayList<Integer>>[] block = blocks[partitionId];
+            Kryo kryo = kryoes[partitionId];
+            Input input = new Input(blocks[partitionId].toInputStream());
             int[] counts = mapOutKeyCounts[partitionId];
             HashMap<Integer, Double>[] result = new HashMap[numPartitions];
             for (int i = 0; i < numPartitions; i++) {
                 result[i] = new HashMap<>(counts[i]);
             }
 
-            for (int i = 0; i < block.length; i++) {
-                if (block[i] == null) break;
-                ArrayList<Integer> urls = block[i]._2();
+            int size = initKeyCounts[partitionId];
+            for (int i = 0; i < size; i++) {
+                Tuple2<Integer, ArrayList<Integer>> keyValue =
+                    (Tuple2<Integer, ArrayList<Integer>>) kryo.readObject(input, Tuple2.class);
+                ArrayList<Integer> urls = keyValue._2();
                 final double value = 1.0 / urls.size();
                 for (Integer url : urls) {
                     double newValue = value;
@@ -83,7 +112,8 @@ public class MultiThreadJavaPR extends MultiThreadPR {
 
         @Override
         public HashMap<Integer, Double>[] call() throws Exception {
-            Tuple2<Integer, ArrayList<Integer>>[] block = blocks[partitionId];
+            Kryo kryo = kryoes[partitionId];
+            Input input = new Input(blocks[partitionId].toInputStream());
             int count = reduceInKeyCounts[partitionId];
 
             // reduceBykey:reduce-side
@@ -101,10 +131,12 @@ public class MultiThreadJavaPR extends MultiThreadPR {
 
             // join
             HashMap<Integer, Pair> joinHashMap = new HashMap<>(count);
-            for (int i = 0; i < block.length; i++) {
-                if (block[i] == null) break;
-                int key = block[i]._1();
-                ArrayList<Integer> urls = block[i]._2();
+            int size = initKeyCounts[partitionId];
+            for (int i = 0; i < size; i++) {
+                Tuple2<Integer, ArrayList<Integer>> keyValue =
+                    (Tuple2<Integer, ArrayList<Integer>>) kryo.readObject(input, Tuple2.class);
+                int key = keyValue._1();
+                ArrayList<Integer> urls = keyValue._2();
                 Pair tmpJoin = new Pair(null, urls);
                 joinHashMap.put(key, tmpJoin);
             }
@@ -223,9 +255,9 @@ public class MultiThreadJavaPR extends MultiThreadPR {
             }
         }
 
-//        for (int i = 0; i < numPartitions; i++) {
-//            System.out.println(results[i]);
-//        }
+        for (int i = 0; i < numPartitions; i++) {
+            System.out.println(results[i]);
+        }
     }
 
 }

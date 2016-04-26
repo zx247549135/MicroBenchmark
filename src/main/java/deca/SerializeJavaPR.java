@@ -6,7 +6,6 @@ import com.esotericsoftware.kryo.io.Output;
 import com.twitter.chill.AllScalaRegistrar;
 import scala.Tuple2;
 
-import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -20,27 +19,11 @@ public class SerializeJavaPR extends PR {
         name = "SerializeJavaPR";
     }
 
-    class Chunk extends ByteArrayOutputStream {
-
-        public int capacity() {
-            return buf.length;
-        }
-
-        public Chunk(int size) {
-            super(size);
-        }
-
-        public ByteArrayInputStream toInputStream() {
-            return new ByteArrayInputStream(buf);
-        }
-    }
-
     Chunk cacheSerializeBytes;
     Kryo kryo = new Kryo();
 
     @Override
     protected void cache(Map<Integer, ArrayList<Integer>> links) {
-        long startTime = System.currentTimeMillis();
         cacheSerializeBytes = new Chunk(count * 4 + keyCount * 4 * 6);
         new AllScalaRegistrar().apply(kryo);
 //        ObjectOutputStream obj = null;
@@ -50,9 +33,12 @@ public class SerializeJavaPR extends PR {
 //            e.printStackTrace();
 //        }
 //        Output output = new Output(obj);
+        long startTime = System.currentTimeMillis();
         Output output = new Output(cacheSerializeBytes);
-        for (int key : links.keySet()) {
-            Tuple2<Integer, ArrayList<Integer>> keyValue = new Tuple2<>(key, links.get(key));
+        for (Map.Entry<Integer, ArrayList<Integer>> entry : links.entrySet()) {
+            int key = entry.getKey();
+            ArrayList<Integer> value = entry.getValue();
+            Tuple2<Integer, ArrayList<Integer>> keyValue = new Tuple2<>(key, value);
             kryo.writeObject(output, keyValue);
         }
         output.flush();

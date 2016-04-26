@@ -1,9 +1,6 @@
 package deca;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Map;
@@ -31,6 +28,21 @@ public abstract class PR {
 
         public void set2(ArrayList<Integer> _2) {
             this._2 = _2;
+        }
+    }
+
+    static class Chunk extends ByteArrayOutputStream {
+
+        public int capacity() {
+            return buf.length;
+        }
+
+        public Chunk(int size) {
+            super(size);
+        }
+
+        public ByteArrayInputStream toInputStream() {
+            return new ByteArrayInputStream(buf);
         }
     }
 

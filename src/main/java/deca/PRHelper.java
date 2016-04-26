@@ -41,6 +41,11 @@ public class PRHelper {
                 int numPartitions = Integer.parseInt(args[4]);
                 pr = new MultiThreadJavaPR(numCores, numPartitions);
                 break;
+            } case 7: {
+                int numCores = Integer.parseInt(args[3]);
+                int numPartitions = Integer.parseInt(args[4]);
+                pr = new MultiThreadSerializeJavaPR(numCores, numPartitions);
+                break;
             }
         }
 

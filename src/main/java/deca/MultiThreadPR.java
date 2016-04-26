@@ -15,6 +15,7 @@ public abstract class MultiThreadPR extends PR {
     protected ExecutorService executor;
 
     protected int[] initKeyCounts;
+    protected int[] initCounts;
     protected int[] reduceInKeyCounts;
     protected int[][] mapOutKeyCounts;
 
@@ -24,6 +25,7 @@ public abstract class MultiThreadPR extends PR {
 
         executor = Executors.newFixedThreadPool(numCores);
         initKeyCounts = new int[numPartitions];
+        initCounts = new int[numPartitions];
         reduceInKeyCounts = new int[numPartitions];
         mapOutKeyCounts = new int[numPartitions][numPartitions];
     }
@@ -39,6 +41,7 @@ public abstract class MultiThreadPR extends PR {
             int key = entry.getKey();
             ArrayList<Integer> value = entry.getValue();
             initKeyCounts[key % numPartitions]++;
+            initCounts[key % numPartitions] += value.size() + 1;
             ids.set(key);
             BitSet mapIdSet = mapIdSets[key % numPartitions];
             for (int dst : value) {
